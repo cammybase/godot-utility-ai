@@ -44,10 +44,22 @@ func tickMind(tickDeltaSeconds):
 			# If we did not run the behavior last frame #@REVISIT architecture
 			var initializingBehavior: bool = (activeBehavior != priorityScores[priority]["behavior"]);
 			if(initializingBehavior):
-				activeBehavior = priorityScores[priority]["behavior"];
-				print('initializing behavior ' + activeBehavior.name);
+				# If had a behavior last tick and it has exit method, run it
+				if(activeBehavior):
+					if(activeBehavior.exit):
+						activeBehavior.exit.call();
 
-			var behaviorReturn = activeBehavior.act.call(initializingBehavior, tickDeltaSeconds);
+				# Set the new active behavior
+				activeBehavior = priorityScores[priority]["behavior"];
+
+				# If the new behavior has an enter function, run it
+				if(activeBehavior.enter):
+					activeBehavior.enter.call();
+
+			var behaviorReturn = activeBehavior.tick.call(
+				initializingBehavior,
+				tickDeltaSeconds
+			);
 
 			# If behaviorReturn is an instance of BehaviorResult
 			if(behaviorReturn is BehaviorResult):
@@ -65,51 +77,62 @@ func tickMind(tickDeltaSeconds):
 
 			priority += 1;
 
-func addBehavior(behaviorName: String, calculateScore: Callable, act: Callable, priorityLevel = 0):
-#	var priorityLevels.push(priorityLevel)
-
-	var newBehavior = Behavior.new(behaviorName, calculateScore, act, priorityLevel);
-	behaviors.push_back(newBehavior);
+#@TODO moving to this architecture
+func add_behavior(behavior: Behavior):
+	behaviors.push_back(behavior);
 
 func contemplatePriorities():
-	var priorityScores = [];
+	var priorityScores = []
 
 	for behavior in behaviors:
-		var score = behavior.calculateUtility.call();
+		var score = behavior.score.call()
 		priorityScores.push_back({
 			"score": score,
 			"behavior": behavior
-		});
+		})
 
-	priorityScores.sort_custom(sort_scores_descending);
-	return priorityScores;
-
-#func addBehavior(
-#	behaviorName: String,
-#	calculateUtility: Callable,
-#	act: Callable
-#):
-#	Behavior.new(behaviorName, calculateUtility, act);
+	priorityScores.sort_custom(sort_scores_descending)
+	return priorityScores
 
 static func sort_scores_descending(a, b):
 	if a["score"] > b["score"]:
 		return true
+
 	return false
 
 class Behavior:
-	var name: String;
-	var calculateUtility: Callable;
-	var act: Callable;
+	var name: String
+
+	## Called when the behavior is first activated
+	var enter: Callable
+
+	## Called every tick of the mind
+	var tick: Callable
+
+	## Called when the behavior is deactivated
+	var exit: Callable
+
+	## A function that returns a float representing the utility of the behavior
+	var score: Callable
 
 	## The importance hierarchy ranking of the behavior. Only behaviors with a
 	## priorityLevel equal to or greater than the active Behavior will be
 	## evaluated.
-	var priorityLevel: int;
+	var priorityLevel: int
 
-	func _init(name, calculateUtility, act, priorityLevel = 0):
-		self.name = name;
-		self.calculateUtility = calculateUtility;
-		self.act = act;
+	func _init(
+		name: String,
+		score: Callable,
+		tick: Callable,
+		enter: Callable = Callable(), #@REVISIT can't pass null; I don't like this at all though
+		exit: Callable = Callable(),
+		priorityLevel = 0
+	):
+		self.name = name
+		self.score = score
+		self.tick = tick
+		self.enter = enter
+		self.exit = exit
 		self.priorityLevel = priorityLevel;
 
 class BehaviorResult:
@@ -124,8 +147,8 @@ class BehaviorResult:
 		self.transitionTo = transitionTo;
 
 #@REVISIT architecture
-static func NewBehaviorResult(params: Dictionary):
-	var exclusive = params.get("exclusive", false);
+static func NewBehaviorResult(params: Dictionary = {}):
+	var exclusive = params.get("exclusive", true);
 	var transitionTo = params.get("transitionTo", null);
 
 	return BehaviorResult.new(exclusive, transitionTo);
