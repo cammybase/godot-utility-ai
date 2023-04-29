@@ -56,12 +56,11 @@ func tickMind(tickDeltaSeconds):
 				if(activeBehavior.enter):
 					activeBehavior.enter.call();
 
-			var behaviorReturn = activeBehavior.tick.call(
-				initializingBehavior,
-				tickDeltaSeconds
-			);
+			# Run the behavior's tick method
+			var behaviorReturn = activeBehavior.tick.call(tickDeltaSeconds);
 
 			# If behaviorReturn is an instance of BehaviorResult
+			#@REVISIT should it not always be BehaviorResult
 			if(behaviorReturn is BehaviorResult):
 				# If the behavior wants to consume all attention
 				fullyOccupied = behaviorReturn.exclusive;
