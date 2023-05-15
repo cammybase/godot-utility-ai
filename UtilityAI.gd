@@ -22,17 +22,17 @@ func _process(deltaSeconds: float):
 	if(delta_seconds > tickInterval):
 		#@REVISIT architecture:
 		## Run user defined callback:
-		_tickMind(delta_seconds)
+		_tick_mind(delta_seconds)
 
 		## Run internal callback:
-		tickMind(delta_seconds)
+		tick_mind(delta_seconds)
 
 		delta_seconds = 0
 
-func _tickMind(delta_seconds: float) -> void:
+func _tick_mind(delta_seconds: float) -> void:
 	pass
 
-func tickMind(delta_seconds: float):
+func tick_mind(delta_seconds: float):
 	var behavior_scores = contemplate_priorities(delta_seconds)
 
 	if(behavior_scores.size()):
@@ -77,9 +77,31 @@ func tickMind(delta_seconds: float):
 
 			priority += 1
 
-#@TODO moving to this architecture
-func add_behavior(behavior: Behavior):
+func add_behavior(arg):
+	if(arg is Behavior):
+		add_behavior_from_instance(arg)
+	elif(arg is Dictionary):
+		add_behavior_from_params(arg)
+	else:
+		push_error("UtilityAI.add_behavior: arg must be Behavior or Dictionary")
+
+func add_behavior_from_instance(behavior: Behavior):
 	behaviors.push_back(behavior)
+	return behavior
+
+func add_behavior_from_params(params: Dictionary):
+	var behavior = Behavior.new(
+		params["name"],
+		params["score"],
+		params["tick"],
+		params["enter"],
+		params["exit"],
+		params["priorityLevel"]
+	)
+
+	behaviors.push_back(behavior)
+
+	return behavior
 
 func contemplate_priorities(delta_seconds: float):
 	var behavior_scores = []
