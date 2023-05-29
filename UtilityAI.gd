@@ -90,13 +90,20 @@ func add_behavior_from_instance(behavior: Behavior):
 	return behavior
 
 func add_behavior_from_params(params: Dictionary):
+	# Ensure params has name, score and tick
+	var required_params = ["name", "score", "tick"]
+	for param in required_params:
+		if(!params.has(param)):
+			push_error("UtilityAI.add_behavior_from_params: param missing:" \
+					+ param)
+
 	var behavior = Behavior.new(
 		params["name"],
 		params["score"],
 		params["tick"],
-		params["enter"],
-		params["exit"],
-		params["priorityLevel"]
+		params["enter"] if params.has("enter") else null,
+		params["exit"] if params.has("exit") else null,
+		params["priorityLevel"] if params.has("priorityLevel") else 0
 	)
 
 	behaviors.push_back(behavior)
@@ -151,16 +158,22 @@ class Behavior:
 		name: String,
 		score: Callable,
 		tick: Callable,
-		enter: Callable = Callable(), #@REVISIT can't pass null; I don't like this at all though
-		exit: Callable = Callable(),
+		enter = null, #@REVISIT can't pass null if typed Callable
+		exit = null,
 		priorityLevel = 0
 	):
 		self.name = name
 		self.score = score
 		self.tick = tick
-		self.enter = enter
-		self.exit = exit
-		self.priorityLevel = priorityLevel
+
+		if(enter):
+			self.enter = enter
+
+		if(exit):
+			self.exit = exit
+
+		if(priorityLevel):
+			self.priorityLevel = priorityLevel
 
 class BehaviorResult:
 	## Whether the behavior is exclusive and should consume all attention.
